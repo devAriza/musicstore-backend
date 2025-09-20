@@ -1,62 +1,124 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata.Conventions;
+using MusicStore.Dto.Request;
+using MusicStore.Dto.Response;
 using MusicStore.Entities;
+using MusicStore.Persistence;
 
 namespace MusicStore.Repositories
 {
-    public class GenreRepository
+    public class GenreRepository : IGenreRepository
     {
+        private readonly ApplicationDbContext context;
 
-        private readonly List<Genre> genresList;
-
-        public GenreRepository()
+        public GenreRepository(ApplicationDbContext context)
         {
-            genresList = new List<Genre>();
-            genresList.Add(new Genre { Id = 1, Name = "Salsa" });
-            genresList.Add(new Genre { Id = 2, Name = "Cumbia" });
-            genresList.Add(new Genre { Id = 3, Name = "Balada" });
+            this.context = context;
+        }
+
+        public async Task<List<GenreResponseDto>> GetAsync()
+        {
+
+            // Without injection dependency
+            //ApplicationDbContext context = new(null);
+            //return context.Genres.ToList();
+
+            //With injection dependency
+
+            var items = await context.Set<Genre>()
+                .AsNoTracking()
+                .ToListAsync();
+
+            // Mapping using LINQ
+            var genresResponseDto = items.Select(x => new GenreResponseDto
+            {
+                Id = x.Id,
+                Name = x.Name,
+                Status = x.Status
+            }).ToList();
+
+            return genresResponseDto;
 
         }
 
-        public List<Genre> Get()
+        public async Task<GenreResponseDto?> GetAsync(int id)
         {
-            return genresList;
-        }
 
-        public Genre? Get(int id)
-        {
-            return genresList.FirstOrDefault(g => g.Id == id);
-        }
+            var item = await context.Set<Genre>()
+                .AsNoTracking()
+                .FirstOrDefaultAsync(x => x.Id == id);
 
-        public void Add(Genre genre)
-        {
-            var lastItem = genresList.MaxBy(g => g.Id);
-            genre.Id = lastItem is null ? 1 : lastItem.Id + 1;
-            genresList.Add(genre);
-        }
-
-        public void Update(int id, Genre genre)
-        {
-            var item = Get(id);
             if (item is not null)
             {
-                item.Name = genre.Name;
-                item.Status = genre.Status;
+                var genreResponseDto = new GenreResponseDto
+                {
+                    Id = item.Id,
+                    Name = item.Name,
+                    Status = item.Status
+                };
+                return genreResponseDto;
             }
+            else
+                throw new InvalidOperationException($"Genre with id {id} not found.");
+
         }
 
-        public void Delete(int id)
+        public async Task<int> AddAsync(GenreRequestDto genreRequestDto)
         {
-            var item = Get(id);
+
+            var genre = new Genre
+            {
+                Name = genreRequestDto.Name,
+                Status = genreRequestDto.Status
+            };
+
+            context.Set<Genre>().Add(genre);
+            await context.SaveChangesAsync();
+            return genre.Id;
+
+        }
+
+        public async Task UpdateAsync(int id, GenreRequestDto genreRequestDto)
+        {
+
+            var item = await context.Set<Genre>()
+                .AsNoTracking()
+                .FirstOrDefaultAsync(x => x.Id == id);
+
             if (item is not null)
             {
-                genresList.Remove(item);
+
+                item.Name = genreRequestDto.Name;
+                item.Status = genreRequestDto.Status;
+                context.Update(item);
+                await context.SaveChangesAsync();
+
+            }
+            else
+            {
+                throw new InvalidOperationException($"Genre with id {id} not found.");
             }
 
+        }
+
+        public async Task DeleteAsync(int id)
+        {
+
+            var item = await context.Set<Genre>()
+                .AsNoTracking()
+                .FirstOrDefaultAsync(x => x.Id == id);
+
+
+            if (item is not null)
+            {
+                context.Set<Genre>().Remove(item);
+                await context.SaveChangesAsync();
+            }
+            else
+            {
+                throw new InvalidOperationException($"Genre with id {id} not found.");
+            }
         }
     }
 }

@@ -1,4 +1,8 @@
+using Microsoft.EntityFrameworkCore;
+using MusicStore.Persistence;
 using MusicStore.Repositories;
+
+// Services and configuration for the MusicStore API
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -8,11 +12,21 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-// Register the GenreRepository as a singleton service
-builder.Services.AddSingleton<GenreRepository>(); // Se va a mantener una misma instancia durante toda la vida util de la aplicacion
+// Configuring context
+builder.Services.AddDbContext<ApplicationDbContext>(options =>
+{
+    // SQL Server
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"));
+});
 
-// AddScoped - Se crea una nueva instancia por cada peticion HTTP
+// Register the GenreRepository as a singleton service
+builder.Services.AddScoped<IGenreRepository, GenreRepository>();
+
+// AddSingleton - Se crea una sola instancia de la clase y se comparte en toda la aplicacion, cuando se trabaja con objetos en memoria
+// AddScoped - Se crea una nueva instancia por cada peticion HTTP, cuando se trabaja con BD
 // AddTransient - Se crea una nueva instancia cada vez que se inyecta el servicio
+
+// Middleware configuration
 
 var app = builder.Build();
 

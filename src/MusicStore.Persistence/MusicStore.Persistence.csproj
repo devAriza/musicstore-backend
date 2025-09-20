@@ -10,4 +10,8 @@
     <PackageReference Include="microsoft.entityframeworkcore.sqlserver" Version="9.0.7" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\MusicStore.Entities\MusicStore.Entities.csproj" />
+  </ItemGroup>
+
 </Project>
